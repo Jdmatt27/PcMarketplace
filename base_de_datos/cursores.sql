@@ -172,3 +172,168 @@ END;
 
 
 -- ============================================================
+--  TABLA: USUARIOS
+-- ============================================================
+
+-- 1. Listar todos los usuarios con su rol
+DECLARE
+    CURSOR c_usuarios IS
+        SELECT id_usuario, nombre, email, rol
+        FROM usuarios
+        ORDER BY rol, nombre;
+
+    v_id       usuarios.id_usuario%TYPE;
+    v_nombre   usuarios.nombre%TYPE;
+    v_email    usuarios.email%TYPE;
+    v_rol      usuarios.rol%TYPE;
+    v_contador NUMBER := 0;
+BEGIN
+    OPEN c_usuarios;
+    LOOP
+        FETCH c_usuarios INTO v_id, v_nombre, v_email, v_rol;
+        EXIT WHEN c_usuarios%NOTFOUND;
+        v_contador := v_contador + 1;
+        DBMS_OUTPUT.PUT_LINE(v_contador || '. [' || UPPER(v_rol) || '] ' ||
+            INITCAP(v_nombre) || ' | ' || LOWER(v_email));
+    END LOOP;
+    CLOSE c_usuarios;
+    DBMS_OUTPUT.PUT_LINE('Total usuarios: ' || v_contador);
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_usuarios%ISOPEN THEN CLOSE c_usuarios; END IF;
+        DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+END;
+/
+
+-- 2. Usuarios con rol ADMIN
+DECLARE
+    CURSOR c_admins IS
+        SELECT id_usuario, nombre, email
+        FROM usuarios
+        WHERE UPPER(rol) = 'ADMIN'
+        ORDER BY nombre;
+
+    v_id       usuarios.id_usuario%TYPE;
+    v_nombre   usuarios.nombre%TYPE;
+    v_email    usuarios.email%TYPE;
+    v_contador NUMBER := 0;
+BEGIN
+    OPEN c_admins;
+    LOOP
+        FETCH c_admins INTO v_id, v_nombre, v_email;
+        EXIT WHEN c_admins%NOTFOUND;
+        v_contador := v_contador + 1;
+        DBMS_OUTPUT.PUT_LINE(v_contador || '. ID ' || v_id ||
+            ' | ' || INITCAP(v_nombre) ||
+            ' | ' || LOWER(v_email));
+    END LOOP;
+    CLOSE c_admins;
+    DBMS_OUTPUT.PUT_LINE('Total administradores: ' || v_contador);
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_admins%ISOPEN THEN CLOSE c_admins; END IF;
+        DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+END;
+/
+
+-- 3. Numero de usuarios por cada rol (cursor anidado)
+DECLARE
+    CURSOR c_roles IS
+        SELECT DISTINCT rol FROM usuarios ORDER BY rol;
+
+    CURSOR c_count_rol(p_rol IN VARCHAR2) IS
+        SELECT COUNT(*) FROM usuarios
+        WHERE UPPER(rol) = UPPER(p_rol);
+
+    v_rol      usuarios.rol%TYPE;
+    v_cantidad NUMBER;
+BEGIN
+    OPEN c_roles;
+    LOOP
+        FETCH c_roles INTO v_rol;
+        EXIT WHEN c_roles%NOTFOUND;
+
+        OPEN c_count_rol(v_rol);
+        FETCH c_count_rol INTO v_cantidad;
+        CLOSE c_count_rol;
+
+        DBMS_OUTPUT.PUT_LINE('Rol: ' || UPPER(v_rol) ||
+            ' -> ' || v_cantidad || ' usuario(s)');
+    END LOOP;
+    CLOSE c_roles;
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_roles%ISOPEN THEN CLOSE c_roles; END IF;
+        DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+END;
+/
+
+-- 4. Buscar usuario por email
+DECLARE
+    v_buscar usuarios.email%TYPE := 'admin@crm.com';
+
+    CURSOR c_por_email IS
+        SELECT id_usuario, nombre, rol
+        FROM usuarios
+        WHERE LOWER(email) = LOWER(v_buscar);
+
+    v_id     usuarios.id_usuario%TYPE;
+    v_nombre usuarios.nombre%TYPE;
+    v_rol    usuarios.rol%TYPE;
+BEGIN
+    OPEN c_por_email;
+    FETCH c_por_email INTO v_id, v_nombre, v_rol;
+
+    IF c_por_email%NOTFOUND THEN
+        DBMS_OUTPUT.PUT_LINE('No existe usuario con email: ' || v_buscar);
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('ID:     ' || v_id);
+        DBMS_OUTPUT.PUT_LINE('Nombre: ' || INITCAP(v_nombre));
+        DBMS_OUTPUT.PUT_LINE('Rol:    ' || UPPER(v_rol));
+    END IF;
+
+    CLOSE c_por_email;
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_por_email%ISOPEN THEN CLOSE c_por_email; END IF;
+        DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+END;
+/
+
+-- 5. Usuarios comerciales ordenados por nombre
+DECLARE
+    CURSOR c_comerciales IS
+        SELECT id_usuario, nombre, email
+        FROM usuarios
+        WHERE UPPER(rol) = 'COMERCIAL'
+        ORDER BY nombre;
+
+    v_id       usuarios.id_usuario%TYPE;
+    v_nombre   usuarios.nombre%TYPE;
+    v_email    usuarios.email%TYPE;
+    v_contador NUMBER := 0;
+BEGIN
+    OPEN c_comerciales;
+    LOOP
+        FETCH c_comerciales INTO v_id, v_nombre, v_email;
+        EXIT WHEN c_comerciales%NOTFOUND;
+        v_contador := v_contador + 1;
+        DBMS_OUTPUT.PUT_LINE(v_contador || '. ' || INITCAP(v_nombre) ||
+            ' | ' || LOWER(v_email));
+    END LOOP;
+    CLOSE c_comerciales;
+
+    IF v_contador = 0 THEN
+        DBMS_OUTPUT.PUT_LINE('No hay comerciales registrados.');
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('Total comerciales: ' || v_contador);
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_comerciales%ISOPEN THEN CLOSE c_comerciales; END IF;
+        DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+END;
+/
+
+
+-- ============================================================
