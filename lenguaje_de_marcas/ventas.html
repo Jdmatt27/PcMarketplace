@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PcMarketPlace | Ventas</title>
+    <link rel="stylesheet" href="./assets/css/main.css">
+</head>
+
+<body>
+
+    <div class="app">
+        <aside class="sidebar">
+            <div class="sidebar__brand">
+                <span class="sidebar__logo">P</span>
+                <div>
+                    <h1 class="sidebar__title">PcMarketPlace</h1>
+                    <p class="sidebar__subtitle">Gestión comercial</p>
+                </div>
+            </div>
+
+            <nav class="sidebar__nav">
+                <a href="index.html" class="sidebar__link">Panel de control</a>
+                <a href="clientes.html" class="sidebar__link">Clientes</a>
+                <a href="productos.html" class="sidebar__link">Productos</a>
+                <a href="ventas.html" class="sidebar__link sidebar__link--active">Ventas</a>
+                <a href="usuarios.html" class="sidebar__link">Equipo comercial</a>
+            </nav>
+        </aside>
+
+        <main class="main">
+            <header class="topbar">
+                <div>
+                    <p class="topbar__eyebrow">Operaciones comerciales</p>
+                    <h2 class="topbar__title">Ventas</h2>
+                </div>
+            </header>
+
+            <section class="management">
+                <article class="panel">
+                    <div class="panel__header">
+                        <div>
+                            <h3 class="panel__title">Nueva venta</h3>
+                            <p class="panel__description">Registra una operación comercial asociada a un cliente y a un
+                                comercial.</p>
+                        </div>
+                    </div>
+
+                    <form class="form" id="saleForm">
+                        <input type="hidden" id="ventaId">
+
+                        <div class="form__group">
+                            <label class="form__label" for="cliente">Cliente</label>
+                            <select class="form__select" id="cliente" required></select>
+                        </div>
+
+                        <div class="form__group">
+                            <label class="form__label" for="usuario">Comercial</label>
+                            <select class="form__select" id="usuario" required></select>
+                        </div>
+
+                        <div class="form__group">
+                            <label class="form__label" for="producto">Producto</label>
+                            <select class="form__select" id="producto" required></select>
+                        </div>
+
+                        <div class="form__group">
+                            <label class="form__label" for="cantidad">Cantidad</label>
+                            <input class="form__input" type="number" id="cantidad" min="1" value="1" required>
+                        </div>
+
+                        <div class="form__group">
+                            <label class="form__label" for="estado">Estado</label>
+                            <select class="form__select" id="estado" required>
+                                <option value="Pendiente">Pendiente</option>
+                                <option value="Completada">Completada</option>
+                                <option value="Cancelada">Cancelada</option>
+                            </select>
+                        </div>
+
+                        <div class="sale-summary">
+                            <p class="sale-summary__label">Total estimado</p>
+                            <strong class="sale-summary__total" id="saleTotal">0 €</strong>
+                        </div>
+
+                        <div class="form__actions">
+                            <button class="button button--primary" type="submit" id="submitButton">
+                                Registrar venta
+                            </button>
+
+                            <button class="button button--secondary" type="button" id="resetButton">
+                                Limpiar
+                            </button>
+                        </div>
+                    </form>
+                </article>
+
+                <article class="panel">
+                    <div class="panel__header">
+                        <div>
+                            <h3 class="panel__title">Historial de ventas</h3>
+                            <p class="panel__description">Consulta, edita o elimina operaciones registradas.</p>
+                        </div>
+                    </div>
+
+                    <div class="toolbar">
+                        <input class="toolbar__search" type="search" id="searchSale" placeholder="Buscar venta...">
+                    </div>
+
+                    <div class="table table--sales" id="salesTable"></div>
+                </article>
+            </section>
+        </main>
+    </div>
+
+    <script src="./assets/js/models.js"></script>
+    <script src="./assets/js/storage.js"></script>
+    <script src="./assets/js/ventas.js"></script>
+</body>
+
+</html>
