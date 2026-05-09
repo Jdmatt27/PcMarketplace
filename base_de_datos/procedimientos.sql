@@ -139,3 +139,150 @@ SELECT func_nombre_cliente(1) FROM DUAL;
 
 
 -- ============================================================
+--  TABLA: USUARIOS
+-- ============================================================
+
+-- PROCEDIMIENTO 1: Listar usuarios agrupados por rol
+CREATE OR REPLACE PROCEDURE proc_listar_usuarios_por_rol IS
+    CURSOR c_roles IS
+        SELECT DISTINCT rol FROM usuarios ORDER BY rol;
+
+    CURSOR c_usuarios_rol(p_rol IN VARCHAR2) IS
+        SELECT id_usuario, nombre, email
+        FROM usuarios
+        WHERE rol = p_rol
+        ORDER BY nombre;
+
+    v_rol      usuarios.rol%TYPE;
+    v_id       usuarios.id_usuario%TYPE;
+    v_nombre   usuarios.nombre%TYPE;
+    v_email    usuarios.email%TYPE;
+    v_contador NUMBER;
+BEGIN
+    OPEN c_roles;
+    LOOP
+        FETCH c_roles INTO v_rol;
+        EXIT WHEN c_roles%NOTFOUND;
+
+        v_contador := 0;
+        DBMS_OUTPUT.PUT_LINE('--- ' || UPPER(v_rol) || ' ---');
+
+        OPEN c_usuarios_rol(v_rol);
+        LOOP
+            FETCH c_usuarios_rol INTO v_id, v_nombre, v_email;
+            EXIT WHEN c_usuarios_rol%NOTFOUND;
+            v_contador := v_contador + 1;
+            DBMS_OUTPUT.PUT_LINE('  ' || v_contador || '. ' ||
+                INITCAP(v_nombre) || ' (' || LOWER(v_email) || ')');
+        END LOOP;
+        CLOSE c_usuarios_rol;
+
+        IF v_contador = 0 THEN
+            DBMS_OUTPUT.PUT_LINE('  Sin usuarios en este rol.');
+        END IF;
+    END LOOP;
+    CLOSE c_roles;
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_roles%ISOPEN THEN CLOSE c_roles; END IF;
+        DBMS_OUTPUT.PUT_LINE('Error en proc_listar_usuarios_por_rol: ' || SQLERRM);
+END proc_listar_usuarios_por_rol;
+/
+
+-- PROCEDIMIENTO 2: Cambiar el rol de un usuario
+CREATE OR REPLACE PROCEDURE proc_cambiar_rol(
+    p_id_usuario IN usuarios.id_usuario%TYPE,
+    p_nuevo_rol  IN usuarios.rol%TYPE
+) IS
+    v_nombre    usuarios.nombre%TYPE;
+    v_rol_viejo usuarios.rol%TYPE;
+    v_existe    NUMBER;
+BEGIN
+    SELECT COUNT(*) INTO v_existe FROM usuarios WHERE id_usuario = p_id_usuario;
+
+    IF v_existe = 0 THEN
+        RAISE_APPLICATION_ERROR(-20003, 'Usuario con ID ' || p_id_usuario || ' no existe.');
+    END IF;
+
+    SELECT nombre, rol INTO v_nombre, v_rol_viejo
+    FROM usuarios WHERE id_usuario = p_id_usuario;
+
+    IF LENGTH(TRIM(p_nuevo_rol)) = 0 OR p_nuevo_rol IS NULL THEN
+        RAISE_APPLICATION_ERROR(-20004, 'El nuevo rol no puede estar vacio.');
+    END IF;
+
+    UPDATE usuarios SET rol = UPPER(TRIM(p_nuevo_rol))
+    WHERE id_usuario = p_id_usuario;
+    COMMIT;
+
+    DBMS_OUTPUT.PUT_LINE('Usuario:    ' || INITCAP(v_nombre));
+    DBMS_OUTPUT.PUT_LINE('Rol antes:  ' || v_rol_viejo);
+    DBMS_OUTPUT.PUT_LINE('Rol nuevo:  ' || UPPER(TRIM(p_nuevo_rol)));
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('Error en proc_cambiar_rol: ' || SQLERRM);
+END proc_cambiar_rol;
+/
+
+-- FUNCION 1: Contar usuarios por rol
+CREATE OR REPLACE FUNCTION func_contar_por_rol(
+    p_rol IN usuarios.rol%TYPE
+) RETURN NUMBER IS
+    v_total NUMBER := 0;
+    CURSOR c_usuarios IS
+        SELECT id_usuario FROM usuarios
+        WHERE UPPER(rol) = UPPER(p_rol);
+    v_id usuarios.id_usuario%TYPE;
+BEGIN
+    OPEN c_usuarios;
+    LOOP
+        FETCH c_usuarios INTO v_id;
+        EXIT WHEN c_usuarios%NOTFOUND;
+        v_total := v_total + 1;
+    END LOOP;
+    CLOSE c_usuarios;
+    RETURN v_total;
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_usuarios%ISOPEN THEN CLOSE c_usuarios; END IF;
+        RETURN -1;
+END func_contar_por_rol;
+/
+
+-- FUNCION 2: Comprobar si existe un email de usuario
+CREATE OR REPLACE FUNCTION func_email_usuario_existe(
+    p_email IN usuarios.email%TYPE
+) RETURN NUMBER IS
+    v_resultado NUMBER := 0;
+    CURSOR c_check IS
+        SELECT id_usuario FROM usuarios
+        WHERE LOWER(email) = LOWER(p_email);
+    v_id usuarios.id_usuario%TYPE;
+BEGIN
+    OPEN c_check;
+    FETCH c_check INTO v_id;
+
+    IF c_check%FOUND THEN
+        v_resultado := 1;
+    ELSE
+        v_resultado := 0;
+    END IF;
+
+    CLOSE c_check;
+    RETURN v_resultado;
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_check%ISOPEN THEN CLOSE c_check; END IF;
+        RETURN -1;
+END func_email_usuario_existe;
+/
+
+-- Llamadas de prueba
+EXEC proc_listar_usuarios_por_rol;
+EXEC proc_cambiar_rol(2, 'ADMIN');
+SELECT func_contar_por_rol('ADMIN') FROM DUAL;
+SELECT func_email_usuario_existe('admin@crm.com') FROM DUAL;
+
+
+-- ============================================================
