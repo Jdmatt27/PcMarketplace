@@ -286,3 +286,161 @@ SELECT func_email_usuario_existe('admin@crm.com') FROM DUAL;
 
 
 -- ============================================================
+--  TABLA: PRODUCTOS
+-- ============================================================
+
+-- PROCEDIMIENTO 1: Listar productos con etiqueta de precio
+CREATE OR REPLACE PROCEDURE proc_listar_productos(
+    p_precio_umbral IN productos.precio%TYPE DEFAULT 100
+) IS
+    CURSOR c_productos IS
+        SELECT id_producto, nombre, precio, categoria
+        FROM productos
+        ORDER BY categoria, precio DESC;
+
+    v_id        productos.id_producto%TYPE;
+    v_nombre    productos.nombre%TYPE;
+    v_precio    productos.precio%TYPE;
+    v_categoria productos.categoria%TYPE;
+    v_contador  NUMBER := 0;
+BEGIN
+    OPEN c_productos;
+    LOOP
+        FETCH c_productos INTO v_id, v_nombre, v_precio, v_categoria;
+        EXIT WHEN c_productos%NOTFOUND;
+        v_contador := v_contador + 1;
+
+        IF v_precio > p_precio_umbral THEN
+            DBMS_OUTPUT.PUT_LINE('[CARO] ' || UPPER(v_nombre) ||
+                ' | ' || ROUND(v_precio, 2) || ' EUR | Cat: ' || v_categoria);
+        ELSE
+            DBMS_OUTPUT.PUT_LINE('[OK]   ' || UPPER(v_nombre) ||
+                ' | ' || ROUND(v_precio, 2) || ' EUR | Cat: ' || v_categoria);
+        END IF;
+    END LOOP;
+    CLOSE c_productos;
+    DBMS_OUTPUT.PUT_LINE('Total productos: ' || v_contador);
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_productos%ISOPEN THEN CLOSE c_productos; END IF;
+        DBMS_OUTPUT.PUT_LINE('Error en proc_listar_productos: ' || SQLERRM);
+END proc_listar_productos;
+/
+
+-- PROCEDIMIENTO 2: Aplicar descuento a una categoria (WHERE CURRENT OF)
+CREATE OR REPLACE PROCEDURE proc_descuento_categoria(
+    p_categoria IN productos.categoria%TYPE,
+    p_descuento IN NUMBER
+) IS
+    CURSOR c_productos_cat IS
+        SELECT id_producto, nombre, precio
+        FROM productos
+        WHERE UPPER(categoria) = UPPER(p_categoria)
+        FOR UPDATE;
+
+    v_id          productos.id_producto%TYPE;
+    v_nombre      productos.nombre%TYPE;
+    v_precio      productos.precio%TYPE;
+    v_precio_nuevo productos.precio%TYPE;
+    v_contador    NUMBER := 0;
+BEGIN
+    IF p_descuento <= 0 OR p_descuento >= 100 THEN
+        RAISE_APPLICATION_ERROR(-20005, 'El descuento debe estar entre 1 y 99.');
+    END IF;
+
+    OPEN c_productos_cat;
+    LOOP
+        FETCH c_productos_cat INTO v_id, v_nombre, v_precio;
+        EXIT WHEN c_productos_cat%NOTFOUND;
+
+        v_precio_nuevo := ROUND(v_precio * (1 - p_descuento / 100), 2);
+
+        UPDATE productos SET precio = v_precio_nuevo
+        WHERE CURRENT OF c_productos_cat;
+
+        v_contador := v_contador + 1;
+        DBMS_OUTPUT.PUT_LINE(INITCAP(v_nombre) || ': ' ||
+            v_precio || ' EUR -> ' || v_precio_nuevo || ' EUR');
+    END LOOP;
+    CLOSE c_productos_cat;
+
+    IF v_contador = 0 THEN
+        DBMS_OUTPUT.PUT_LINE('No se encontraron productos en: ' || p_categoria);
+        ROLLBACK;
+    ELSE
+        COMMIT;
+        DBMS_OUTPUT.PUT_LINE('Descuento aplicado a ' || v_contador || ' producto(s).');
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_productos_cat%ISOPEN THEN CLOSE c_productos_cat; END IF;
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('Error en proc_descuento_categoria: ' || SQLERRM);
+END proc_descuento_categoria;
+/
+
+-- FUNCION 1: Precio medio de una categoria
+CREATE OR REPLACE FUNCTION func_precio_medio_categoria(
+    p_categoria IN productos.categoria%TYPE
+) RETURN NUMBER IS
+    v_suma     NUMBER := 0;
+    v_contador NUMBER := 0;
+    CURSOR c_precios IS
+        SELECT precio FROM productos
+        WHERE UPPER(categoria) = UPPER(p_categoria);
+    v_precio productos.precio%TYPE;
+BEGIN
+    OPEN c_precios;
+    LOOP
+        FETCH c_precios INTO v_precio;
+        EXIT WHEN c_precios%NOTFOUND;
+        v_suma := v_suma + v_precio;
+        v_contador := v_contador + 1;
+    END LOOP;
+    CLOSE c_precios;
+
+    IF v_contador = 0 THEN RETURN 0; END IF;
+    RETURN ROUND(v_suma / v_contador, 2);
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_precios%ISOPEN THEN CLOSE c_precios; END IF;
+        RETURN -1;
+END func_precio_medio_categoria;
+/
+
+-- FUNCION 2: Comprobar si existe un producto por nombre
+CREATE OR REPLACE FUNCTION func_producto_existe(
+    p_nombre IN productos.nombre%TYPE
+) RETURN NUMBER IS
+    v_resultado NUMBER := 0;
+    CURSOR c_buscar IS
+        SELECT id_producto FROM productos
+        WHERE UPPER(nombre) = UPPER(TRIM(p_nombre));
+    v_id productos.id_producto%TYPE;
+BEGIN
+    OPEN c_buscar;
+    FETCH c_buscar INTO v_id;
+
+    IF c_buscar%FOUND THEN
+        v_resultado := 1;
+    ELSE
+        v_resultado := 0;
+    END IF;
+
+    CLOSE c_buscar;
+    RETURN v_resultado;
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_buscar%ISOPEN THEN CLOSE c_buscar; END IF;
+        RETURN -1;
+END func_producto_existe;
+/
+
+-- Llamadas de prueba
+EXEC proc_listar_productos(100);
+EXEC proc_descuento_categoria('Informatica', 10);
+SELECT func_precio_medio_categoria('Informatica') FROM DUAL;
+SELECT func_producto_existe('Monitor Samsung') FROM DUAL;
+
+
+-- ============================================================
