@@ -337,3 +337,183 @@ END;
 
 
 -- ============================================================
+--  TABLA: PRODUCTOS
+-- ============================================================
+
+-- 1. Listar todos los productos con categoria y precio
+DECLARE
+    CURSOR c_productos IS
+        SELECT id_producto, nombre, precio, categoria
+        FROM productos
+        ORDER BY categoria, nombre;
+
+    v_id        productos.id_producto%TYPE;
+    v_nombre    productos.nombre%TYPE;
+    v_precio    productos.precio%TYPE;
+    v_categoria productos.categoria%TYPE;
+    v_contador  NUMBER := 0;
+BEGIN
+    OPEN c_productos;
+    LOOP
+        FETCH c_productos INTO v_id, v_nombre, v_precio, v_categoria;
+        EXIT WHEN c_productos%NOTFOUND;
+        v_contador := v_contador + 1;
+        DBMS_OUTPUT.PUT_LINE(v_contador || '. [' || UPPER(v_categoria) || '] ' ||
+            UPPER(v_nombre) || ' -> ' || ROUND(v_precio, 2) || ' EUR');
+    END LOOP;
+    CLOSE c_productos;
+    DBMS_OUTPUT.PUT_LINE('Total productos: ' || v_contador);
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_productos%ISOPEN THEN CLOSE c_productos; END IF;
+        DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+END;
+/
+
+-- 2. Productos con precio superior a 100 EUR
+DECLARE
+    v_umbral productos.precio%TYPE := 100;
+
+    CURSOR c_caros IS
+        SELECT id_producto, nombre, precio, categoria
+        FROM productos
+        WHERE precio > v_umbral
+        ORDER BY precio DESC;
+
+    v_id        productos.id_producto%TYPE;
+    v_nombre    productos.nombre%TYPE;
+    v_precio    productos.precio%TYPE;
+    v_categoria productos.categoria%TYPE;
+    v_contador  NUMBER := 0;
+BEGIN
+    OPEN c_caros;
+    LOOP
+        FETCH c_caros INTO v_id, v_nombre, v_precio, v_categoria;
+        EXIT WHEN c_caros%NOTFOUND;
+        v_contador := v_contador + 1;
+        DBMS_OUTPUT.PUT_LINE(v_contador || '. ' || UPPER(v_nombre) ||
+            ' | ' || ROUND(v_precio, 2) || ' EUR' ||
+            ' | Cat: ' || v_categoria);
+    END LOOP;
+    CLOSE c_caros;
+    DBMS_OUTPUT.PUT_LINE('Productos por encima de ' || v_umbral || ' EUR: ' || v_contador);
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_caros%ISOPEN THEN CLOSE c_caros; END IF;
+        DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+END;
+/
+
+-- 3. Precio medio por categoria (cursor anidado)
+DECLARE
+    CURSOR c_categorias IS
+        SELECT DISTINCT categoria FROM productos ORDER BY categoria;
+
+    CURSOR c_media(p_cat IN VARCHAR2) IS
+        SELECT COUNT(*), ROUND(AVG(precio), 2)
+        FROM productos
+        WHERE UPPER(categoria) = UPPER(p_cat);
+
+    v_categoria productos.categoria%TYPE;
+    v_cantidad  NUMBER;
+    v_media     NUMBER;
+BEGIN
+    OPEN c_categorias;
+    LOOP
+        FETCH c_categorias INTO v_categoria;
+        EXIT WHEN c_categorias%NOTFOUND;
+
+        OPEN c_media(v_categoria);
+        FETCH c_media INTO v_cantidad, v_media;
+        CLOSE c_media;
+
+        DBMS_OUTPUT.PUT_LINE('Categoria: ' || UPPER(v_categoria) ||
+            ' | Productos: ' || v_cantidad ||
+            ' | Precio medio: ' || v_media || ' EUR');
+    END LOOP;
+    CLOSE c_categorias;
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_categorias%ISOPEN THEN CLOSE c_categorias; END IF;
+        DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+END;
+/
+
+-- 4. Buscar producto por nombre exacto
+DECLARE
+    v_buscar productos.nombre%TYPE := 'Monitor Samsung';
+
+    CURSOR c_por_nombre IS
+        SELECT id_producto, nombre, descripcion, precio, categoria
+        FROM productos
+        WHERE UPPER(nombre) = UPPER(TRIM(v_buscar));
+
+    v_id        productos.id_producto%TYPE;
+    v_nombre    productos.nombre%TYPE;
+    v_desc      productos.descripcion%TYPE;
+    v_precio    productos.precio%TYPE;
+    v_categoria productos.categoria%TYPE;
+BEGIN
+    OPEN c_por_nombre;
+    FETCH c_por_nombre INTO v_id, v_nombre, v_desc, v_precio, v_categoria;
+
+    IF c_por_nombre%NOTFOUND THEN
+        DBMS_OUTPUT.PUT_LINE('Producto no encontrado: ' || v_buscar);
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('ID:          ' || v_id);
+        DBMS_OUTPUT.PUT_LINE('Nombre:      ' || INITCAP(v_nombre));
+        DBMS_OUTPUT.PUT_LINE('Descripcion: ' || NVL(v_desc, 'Sin descripcion'));
+        DBMS_OUTPUT.PUT_LINE('Precio:      ' || ROUND(v_precio, 2) || ' EUR');
+        DBMS_OUTPUT.PUT_LINE('Categoria:   ' || v_categoria);
+    END IF;
+
+    CLOSE c_por_nombre;
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_por_nombre%ISOPEN THEN CLOSE c_por_nombre; END IF;
+        DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+END;
+/
+
+-- 5. Ranking de productos de mas caro a mas barato con etiqueta de precio
+DECLARE
+    CURSOR c_ranking IS
+        SELECT id_producto, nombre, precio, categoria
+        FROM productos
+        ORDER BY precio DESC;
+
+    v_id        productos.id_producto%TYPE;
+    v_nombre    productos.nombre%TYPE;
+    v_precio    productos.precio%TYPE;
+    v_categoria productos.categoria%TYPE;
+    v_pos       NUMBER := 0;
+    v_etiqueta  VARCHAR2(10);
+BEGIN
+    OPEN c_ranking;
+    LOOP
+        FETCH c_ranking INTO v_id, v_nombre, v_precio, v_categoria;
+        EXIT WHEN c_ranking%NOTFOUND;
+        v_pos := v_pos + 1;
+
+        IF v_precio > 500 THEN
+            v_etiqueta := '[PREMIUM]';
+        ELSIF v_precio > 100 THEN
+            v_etiqueta := '[MEDIO]  ';
+        ELSE
+            v_etiqueta := '[BASICO] ';
+        END IF;
+
+        DBMS_OUTPUT.PUT_LINE('#' || v_pos || ' ' || v_etiqueta ||
+            ' ' || UPPER(v_nombre) ||
+            ' | ' || ROUND(v_precio, 2) || ' EUR');
+    END LOOP;
+    CLOSE c_ranking;
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_ranking%ISOPEN THEN CLOSE c_ranking; END IF;
+        DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+END;
+/
+
+
+-- ============================================================
