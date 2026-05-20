@@ -444,3 +444,156 @@ SELECT func_producto_existe('Monitor Samsung') FROM DUAL;
 
 
 -- ============================================================
+--  TABLA: VENTAS
+-- ============================================================
+
+-- PROCEDIMIENTO 1: Resumen de ventas agrupado por estado
+CREATE OR REPLACE PROCEDURE proc_resumen_ventas IS
+    CURSOR c_estados IS
+        SELECT DISTINCT estado FROM ventas ORDER BY estado;
+
+    CURSOR c_ventas_estado(p_estado IN VARCHAR2) IS
+        SELECT v.id_venta, c.nombre AS cliente, v.total, v.fecha
+        FROM ventas v
+        JOIN clientes c ON v.id_cliente = c.id_cliente
+        WHERE v.estado = p_estado
+        ORDER BY v.total DESC;
+
+    v_estado   ventas.estado%TYPE;
+    v_id       ventas.id_venta%TYPE;
+    v_cliente  clientes.nombre%TYPE;
+    v_total    ventas.total%TYPE;
+    v_fecha    ventas.fecha%TYPE;
+    v_suma     NUMBER;
+    v_contador NUMBER;
+BEGIN
+    OPEN c_estados;
+    LOOP
+        FETCH c_estados INTO v_estado;
+        EXIT WHEN c_estados%NOTFOUND;
+
+        v_suma := 0;
+        v_contador := 0;
+        DBMS_OUTPUT.PUT_LINE('--- ' || UPPER(v_estado) || ' ---');
+
+        OPEN c_ventas_estado(v_estado);
+        LOOP
+            FETCH c_ventas_estado INTO v_id, v_cliente, v_total, v_fecha;
+            EXIT WHEN c_ventas_estado%NOTFOUND;
+            v_suma := v_suma + v_total;
+            v_contador := v_contador + 1;
+            DBMS_OUTPUT.PUT_LINE('  Venta #' || v_id ||
+                ' | ' || INITCAP(v_cliente) ||
+                ' | ' || TO_CHAR(v_total, '9990.00') || ' EUR' ||
+                ' | ' || TO_CHAR(v_fecha, 'DD/MM/YYYY'));
+        END LOOP;
+        CLOSE c_ventas_estado;
+
+        DBMS_OUTPUT.PUT_LINE('  Subtotal: ' || ROUND(v_suma, 2) ||
+            ' EUR (' || v_contador || ' ventas)');
+    END LOOP;
+    CLOSE c_estados;
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_estados%ISOPEN THEN CLOSE c_estados; END IF;
+        DBMS_OUTPUT.PUT_LINE('Error en proc_resumen_ventas: ' || SQLERRM);
+END proc_resumen_ventas;
+/
+
+-- PROCEDIMIENTO 2: Cambiar el estado de una venta
+CREATE OR REPLACE PROCEDURE proc_cambiar_estado_venta(
+    p_id_venta    IN ventas.id_venta%TYPE,
+    p_nuevo_estado IN ventas.estado%TYPE
+) IS
+    v_estado_actual ventas.estado%TYPE;
+    v_existe        NUMBER;
+    v_estado_upper  VARCHAR2(30);
+BEGIN
+    v_estado_upper := UPPER(TRIM(p_nuevo_estado));
+
+    SELECT COUNT(*) INTO v_existe FROM ventas WHERE id_venta = p_id_venta;
+    IF v_existe = 0 THEN
+        RAISE_APPLICATION_ERROR(-20006, 'Venta ' || p_id_venta || ' no encontrada.');
+    END IF;
+
+    SELECT estado INTO v_estado_actual FROM ventas WHERE id_venta = p_id_venta;
+
+    IF v_estado_upper NOT IN ('PENDIENTE','PAGADA','ENTREGADA','CANCELADA','REVISADA') THEN
+        RAISE_APPLICATION_ERROR(-20007, 'Estado no valido: ' || p_nuevo_estado);
+    END IF;
+
+    IF v_estado_actual = 'CANCELADA' THEN
+        RAISE_APPLICATION_ERROR(-20008, 'No se puede cambiar el estado de una venta CANCELADA.');
+    END IF;
+
+    UPDATE ventas SET estado = v_estado_upper WHERE id_venta = p_id_venta;
+    COMMIT;
+
+    DBMS_OUTPUT.PUT_LINE('Venta #' || p_id_venta ||
+        ': ' || v_estado_actual || ' -> ' || v_estado_upper);
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('Error en proc_cambiar_estado_venta: ' || SQLERRM);
+END proc_cambiar_estado_venta;
+/
+
+-- FUNCION 1: Total gastado por un cliente (sin canceladas)
+CREATE OR REPLACE FUNCTION func_total_cliente(
+    p_id_cliente IN ventas.id_cliente%TYPE
+) RETURN NUMBER IS
+    v_total NUMBER := 0;
+    CURSOR c_ventas IS
+        SELECT total FROM ventas
+        WHERE id_cliente = p_id_cliente
+        AND UPPER(estado) != 'CANCELADA';
+    v_importe ventas.total%TYPE;
+BEGIN
+    OPEN c_ventas;
+    LOOP
+        FETCH c_ventas INTO v_importe;
+        EXIT WHEN c_ventas%NOTFOUND;
+        v_total := v_total + v_importe;
+    END LOOP;
+    CLOSE c_ventas;
+    RETURN ROUND(v_total, 2);
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_ventas%ISOPEN THEN CLOSE c_ventas; END IF;
+        RETURN -1;
+END func_total_cliente;
+/
+
+-- FUNCION 2: Contar ventas por estado
+CREATE OR REPLACE FUNCTION func_contar_ventas_estado(
+    p_estado IN ventas.estado%TYPE
+) RETURN NUMBER IS
+    v_contador NUMBER := 0;
+    CURSOR c_ventas IS
+        SELECT id_venta FROM ventas
+        WHERE UPPER(estado) = UPPER(p_estado);
+    v_id ventas.id_venta%TYPE;
+BEGIN
+    OPEN c_ventas;
+    LOOP
+        FETCH c_ventas INTO v_id;
+        EXIT WHEN c_ventas%NOTFOUND;
+        v_contador := v_contador + 1;
+    END LOOP;
+    CLOSE c_ventas;
+    RETURN v_contador;
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_ventas%ISOPEN THEN CLOSE c_ventas; END IF;
+        RETURN -1;
+END func_contar_ventas_estado;
+/
+
+-- Llamadas de prueba
+EXEC proc_resumen_ventas;
+EXEC proc_cambiar_estado_venta(1, 'PAGADA');
+SELECT func_total_cliente(1) FROM DUAL;
+SELECT func_contar_ventas_estado('PENDIENTE') FROM DUAL;
+
+
+-- ============================================================
