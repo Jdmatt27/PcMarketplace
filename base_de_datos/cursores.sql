@@ -517,3 +517,221 @@ END;
 
 
 -- ============================================================
+--  TABLA: VENTAS
+-- ============================================================
+
+-- 1. Listar todas las ventas con nombre de cliente y usuario
+DECLARE
+    CURSOR c_ventas IS
+        SELECT v.id_venta, c.nombre AS cliente, u.nombre AS usuario,
+               v.total, v.estado, v.fecha
+        FROM ventas v
+        JOIN clientes c ON v.id_cliente = c.id_cliente
+        JOIN usuarios u ON v.id_usuario = u.id_usuario
+        ORDER BY v.fecha DESC;
+
+    v_id       ventas.id_venta%TYPE;
+    v_cliente  clientes.nombre%TYPE;
+    v_usuario  usuarios.nombre%TYPE;
+    v_total    ventas.total%TYPE;
+    v_estado   ventas.estado%TYPE;
+    v_fecha    ventas.fecha%TYPE;
+    v_contador NUMBER := 0;
+BEGIN
+    OPEN c_ventas;
+    LOOP
+        FETCH c_ventas INTO v_id, v_cliente, v_usuario, v_total, v_estado, v_fecha;
+        EXIT WHEN c_ventas%NOTFOUND;
+        v_contador := v_contador + 1;
+        DBMS_OUTPUT.PUT_LINE('Venta #' || v_id ||
+            ' | ' || INITCAP(v_cliente) ||
+            ' | ' || INITCAP(v_usuario) ||
+            ' | ' || TO_CHAR(v_total, '9990.00') || ' EUR' ||
+            ' | ' || UPPER(v_estado) ||
+            ' | ' || TO_CHAR(v_fecha, 'DD/MM/YYYY'));
+    END LOOP;
+    CLOSE c_ventas;
+    DBMS_OUTPUT.PUT_LINE('Total ventas: ' || v_contador);
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_ventas%ISOPEN THEN CLOSE c_ventas; END IF;
+        DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+END;
+/
+
+-- 2. Ventas pendientes con suma total pendiente de cobro
+DECLARE
+    CURSOR c_pendientes IS
+        SELECT v.id_venta, c.nombre AS cliente, v.total, v.fecha
+        FROM ventas v
+        JOIN clientes c ON v.id_cliente = c.id_cliente
+        WHERE UPPER(v.estado) = 'PENDIENTE'
+        ORDER BY v.fecha ASC;
+
+    v_id       ventas.id_venta%TYPE;
+    v_cliente  clientes.nombre%TYPE;
+    v_total    ventas.total%TYPE;
+    v_fecha    ventas.fecha%TYPE;
+    v_suma     NUMBER := 0;
+    v_contador NUMBER := 0;
+BEGIN
+    OPEN c_pendientes;
+    LOOP
+        FETCH c_pendientes INTO v_id, v_cliente, v_total, v_fecha;
+        EXIT WHEN c_pendientes%NOTFOUND;
+        v_contador := v_contador + 1;
+        v_suma := v_suma + v_total;
+        DBMS_OUTPUT.PUT_LINE('Venta #' || v_id ||
+            ' | ' || INITCAP(v_cliente) ||
+            ' | ' || ROUND(v_total, 2) || ' EUR' ||
+            ' | Fecha: ' || TO_CHAR(v_fecha, 'DD/MM/YYYY'));
+    END LOOP;
+    CLOSE c_pendientes;
+    DBMS_OUTPUT.PUT_LINE('Total pendiente: ' || ROUND(v_suma, 2) ||
+        ' EUR (' || v_contador || ' ventas)');
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_pendientes%ISOPEN THEN CLOSE c_pendientes; END IF;
+        DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+END;
+/
+
+-- 3. Ventas agrupadas por estado con subtotal (cursor anidado)
+DECLARE
+    CURSOR c_estados IS
+        SELECT DISTINCT estado FROM ventas ORDER BY estado;
+
+    CURSOR c_por_estado(p_estado IN VARCHAR2) IS
+        SELECT v.id_venta, c.nombre AS cliente, v.total
+        FROM ventas v
+        JOIN clientes c ON v.id_cliente = c.id_cliente
+        WHERE UPPER(v.estado) = UPPER(p_estado)
+        ORDER BY v.total DESC;
+
+    v_estado   ventas.estado%TYPE;
+    v_id       ventas.id_venta%TYPE;
+    v_cliente  clientes.nombre%TYPE;
+    v_total    ventas.total%TYPE;
+    v_suma     NUMBER;
+    v_contador NUMBER;
+BEGIN
+    OPEN c_estados;
+    LOOP
+        FETCH c_estados INTO v_estado;
+        EXIT WHEN c_estados%NOTFOUND;
+
+        v_suma := 0;
+        v_contador := 0;
+        DBMS_OUTPUT.PUT_LINE('--- ' || UPPER(v_estado) || ' ---');
+
+        OPEN c_por_estado(v_estado);
+        LOOP
+            FETCH c_por_estado INTO v_id, v_cliente, v_total;
+            EXIT WHEN c_por_estado%NOTFOUND;
+            v_suma := v_suma + v_total;
+            v_contador := v_contador + 1;
+            DBMS_OUTPUT.PUT_LINE('  Venta #' || v_id ||
+                ' | ' || INITCAP(v_cliente) ||
+                ' | ' || ROUND(v_total, 2) || ' EUR');
+        END LOOP;
+        CLOSE c_por_estado;
+
+        DBMS_OUTPUT.PUT_LINE('  Subtotal: ' || ROUND(v_suma, 2) ||
+            ' EUR (' || v_contador || ' ventas)');
+    END LOOP;
+    CLOSE c_estados;
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_estados%ISOPEN THEN CLOSE c_estados; END IF;
+        DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+END;
+/
+
+-- 4. Todas las ventas de un cliente concreto
+DECLARE
+    v_id_cliente ventas.id_cliente%TYPE := 1;
+
+    CURSOR c_ventas_cliente IS
+        SELECT id_venta, total, estado, fecha
+        FROM ventas
+        WHERE id_cliente = v_id_cliente
+        ORDER BY fecha DESC;
+
+    v_id       ventas.id_venta%TYPE;
+    v_total    ventas.total%TYPE;
+    v_estado   ventas.estado%TYPE;
+    v_fecha    ventas.fecha%TYPE;
+    v_suma     NUMBER := 0;
+    v_contador NUMBER := 0;
+BEGIN
+    OPEN c_ventas_cliente;
+    LOOP
+        FETCH c_ventas_cliente INTO v_id, v_total, v_estado, v_fecha;
+        EXIT WHEN c_ventas_cliente%NOTFOUND;
+        v_contador := v_contador + 1;
+        v_suma := v_suma + v_total;
+        DBMS_OUTPUT.PUT_LINE('Venta #' || v_id ||
+            ' | ' || ROUND(v_total, 2) || ' EUR' ||
+            ' | ' || UPPER(v_estado) ||
+            ' | ' || TO_CHAR(v_fecha, 'DD/MM/YYYY'));
+    END LOOP;
+    CLOSE c_ventas_cliente;
+
+    IF v_contador = 0 THEN
+        DBMS_OUTPUT.PUT_LINE('El cliente ' || v_id_cliente || ' no tiene ventas.');
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('Total gastado: ' || ROUND(v_suma, 2) ||
+            ' EUR (' || v_contador || ' ventas)');
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_ventas_cliente%ISOPEN THEN CLOSE c_ventas_cliente; END IF;
+        DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+END;
+/
+
+-- 5. Ranking de ventas de mayor a menor importe
+DECLARE
+    CURSOR c_ranking IS
+        SELECT v.id_venta, c.nombre AS cliente, v.total, v.estado
+        FROM ventas v
+        JOIN clientes c ON v.id_cliente = c.id_cliente
+        ORDER BY v.total DESC;
+
+    v_id       ventas.id_venta%TYPE;
+    v_cliente  clientes.nombre%TYPE;
+    v_total    ventas.total%TYPE;
+    v_estado   ventas.estado%TYPE;
+    v_pos      NUMBER := 0;
+    v_etiqueta VARCHAR2(10);
+BEGIN
+    OPEN c_ranking;
+    LOOP
+        FETCH c_ranking INTO v_id, v_cliente, v_total, v_estado;
+        EXIT WHEN c_ranking%NOTFOUND;
+        v_pos := v_pos + 1;
+
+        IF v_pos = 1 THEN
+            v_etiqueta := '[TOP]   ';
+        ELSIF v_total > 500 THEN
+            v_etiqueta := '[ALTA]  ';
+        ELSE
+            v_etiqueta := '[NORMAL]';
+        END IF;
+
+        DBMS_OUTPUT.PUT_LINE('#' || v_pos || ' ' || v_etiqueta ||
+            ' Venta #' || v_id ||
+            ' | ' || INITCAP(v_cliente) ||
+            ' | ' || ROUND(v_total, 2) || ' EUR' ||
+            ' | ' || UPPER(v_estado));
+    END LOOP;
+    CLOSE c_ranking;
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_ranking%ISOPEN THEN CLOSE c_ranking; END IF;
+        DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+END;
+/
+
+
+-- ============================================================
