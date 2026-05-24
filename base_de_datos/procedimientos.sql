@@ -597,3 +597,169 @@ SELECT func_contar_ventas_estado('PENDIENTE') FROM DUAL;
 
 
 -- ============================================================
+--  TABLA: DETALLE_VENTA
+-- ============================================================
+
+-- PROCEDIMIENTO 1: Ver el detalle completo de una venta
+CREATE OR REPLACE PROCEDURE proc_detalle_venta(
+    p_id_venta IN detalle_venta.id_venta%TYPE
+) IS
+    CURSOR c_detalle IS
+        SELECT dv.id_detalle, p.nombre AS producto,
+               dv.cantidad, dv.precio_unitario,
+               dv.cantidad * dv.precio_unitario AS subtotal
+        FROM detalle_venta dv
+        JOIN productos p ON dv.id_producto = p.id_producto
+        WHERE dv.id_venta = p_id_venta
+        ORDER BY dv.id_detalle;
+
+    v_id_det   detalle_venta.id_detalle%TYPE;
+    v_producto productos.nombre%TYPE;
+    v_cantidad detalle_venta.cantidad%TYPE;
+    v_precio   detalle_venta.precio_unitario%TYPE;
+    v_subtotal NUMBER;
+    v_total    NUMBER := 0;
+    v_lineas   NUMBER := 0;
+    v_existe   NUMBER;
+BEGIN
+    SELECT COUNT(*) INTO v_existe FROM ventas WHERE id_venta = p_id_venta;
+    IF v_existe = 0 THEN
+        RAISE_APPLICATION_ERROR(-20009, 'La venta ' || p_id_venta || ' no existe.');
+    END IF;
+
+    DBMS_OUTPUT.PUT_LINE('=== Detalle venta #' || p_id_venta || ' ===');
+    OPEN c_detalle;
+    LOOP
+        FETCH c_detalle INTO v_id_det, v_producto, v_cantidad, v_precio, v_subtotal;
+        EXIT WHEN c_detalle%NOTFOUND;
+        v_lineas := v_lineas + 1;
+        v_total  := v_total + v_subtotal;
+
+        IF v_cantidad > 1 THEN
+            DBMS_OUTPUT.PUT_LINE('  ' || v_lineas || '. ' || UPPER(v_producto) ||
+                ' x' || v_cantidad ||
+                ' | ' || v_precio || ' EUR/u' ||
+                ' | Subtotal: ' || ROUND(v_subtotal, 2) || ' EUR');
+        ELSE
+            DBMS_OUTPUT.PUT_LINE('  ' || v_lineas || '. ' || UPPER(v_producto) ||
+                ' | ' || v_precio || ' EUR');
+        END IF;
+    END LOOP;
+    CLOSE c_detalle;
+
+    IF v_lineas = 0 THEN
+        DBMS_OUTPUT.PUT_LINE('  Esta venta no tiene lineas de detalle.');
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('  TOTAL: ' || ROUND(v_total, 2) ||
+            ' EUR (' || v_lineas || ' lineas)');
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_detalle%ISOPEN THEN CLOSE c_detalle; END IF;
+        DBMS_OUTPUT.PUT_LINE('Error en proc_detalle_venta: ' || SQLERRM);
+END proc_detalle_venta;
+/
+
+-- PROCEDIMIENTO 2: Ranking de productos mas vendidos
+CREATE OR REPLACE PROCEDURE proc_top_productos IS
+    CURSOR c_top IS
+        SELECT p.nombre, SUM(dv.cantidad) AS total_uds,
+               ROUND(SUM(dv.cantidad * dv.precio_unitario), 2) AS total_eur
+        FROM detalle_venta dv
+        JOIN productos p ON dv.id_producto = p.id_producto
+        GROUP BY p.nombre
+        ORDER BY total_uds DESC;
+
+    v_nombre    productos.nombre%TYPE;
+    v_total_uds NUMBER;
+    v_total_eur NUMBER;
+    v_posicion  NUMBER := 0;
+BEGIN
+    OPEN c_top;
+    LOOP
+        FETCH c_top INTO v_nombre, v_total_uds, v_total_eur;
+        EXIT WHEN c_top%NOTFOUND;
+        v_posicion := v_posicion + 1;
+
+        IF v_posicion = 1 THEN
+            DBMS_OUTPUT.PUT_LINE('#' || v_posicion || ' [TOP] ' || UPPER(v_nombre) ||
+                ' | ' || v_total_uds || ' uds | ' || v_total_eur || ' EUR');
+        ELSE
+            DBMS_OUTPUT.PUT_LINE('#' || v_posicion || '      ' || UPPER(v_nombre) ||
+                ' | ' || v_total_uds || ' uds | ' || v_total_eur || ' EUR');
+        END IF;
+    END LOOP;
+    CLOSE c_top;
+
+    IF v_posicion = 0 THEN
+        DBMS_OUTPUT.PUT_LINE('No hay datos de detalle de ventas.');
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_top%ISOPEN THEN CLOSE c_top; END IF;
+        DBMS_OUTPUT.PUT_LINE('Error en proc_top_productos: ' || SQLERRM);
+END proc_top_productos;
+/
+
+-- FUNCION 1: Total calculado de una venta desde su detalle
+CREATE OR REPLACE FUNCTION func_total_venta(
+    p_id_venta IN detalle_venta.id_venta%TYPE
+) RETURN NUMBER IS
+    v_total NUMBER := 0;
+    CURSOR c_lineas IS
+        SELECT cantidad, precio_unitario
+        FROM detalle_venta WHERE id_venta = p_id_venta;
+    v_cantidad detalle_venta.cantidad%TYPE;
+    v_precio   detalle_venta.precio_unitario%TYPE;
+BEGIN
+    OPEN c_lineas;
+    LOOP
+        FETCH c_lineas INTO v_cantidad, v_precio;
+        EXIT WHEN c_lineas%NOTFOUND;
+        v_total := v_total + (v_cantidad * v_precio);
+    END LOOP;
+    CLOSE c_lineas;
+    RETURN ROUND(v_total, 2);
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_lineas%ISOPEN THEN CLOSE c_lineas; END IF;
+        RETURN -1;
+END func_total_venta;
+/
+
+-- FUNCION 2: Contar el numero de lineas de una venta
+CREATE OR REPLACE FUNCTION func_lineas_venta(
+    p_id_venta IN detalle_venta.id_venta%TYPE
+) RETURN NUMBER IS
+    v_contador NUMBER := 0;
+    CURSOR c_lineas IS
+        SELECT id_detalle FROM detalle_venta WHERE id_venta = p_id_venta;
+    v_id detalle_venta.id_detalle%TYPE;
+BEGIN
+    OPEN c_lineas;
+    LOOP
+        FETCH c_lineas INTO v_id;
+        EXIT WHEN c_lineas%NOTFOUND;
+        v_contador := v_contador + 1;
+    END LOOP;
+    CLOSE c_lineas;
+
+    IF v_contador = 0 THEN
+        RAISE_APPLICATION_ERROR(-20010, 'La venta ' || p_id_venta || ' no tiene lineas.');
+    END IF;
+
+    RETURN v_contador;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RETURN 0;
+    WHEN OTHERS THEN
+        IF c_lineas%ISOPEN THEN CLOSE c_lineas; END IF;
+        RETURN -1;
+END func_lineas_venta;
+/
+
+-- Llamadas de prueba
+EXEC proc_detalle_venta(1);
+EXEC proc_top_productos;
+SELECT func_total_venta(1) FROM DUAL;
+SELECT func_lineas_venta(1) FROM DUAL;
