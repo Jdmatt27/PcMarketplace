@@ -1,75 +1,47 @@
-# PcMarketplace - Sistema CRM
+README PROGRAMACION
 
-Aplicacion de gestion para una tienda de componentes de PC. Permite administrar clientes, usuarios, productos y ventas desde la consola.
+REQUISITOS PREVIOS
+    - Java JDK 17 o superior instalado
+    - IntelliJ IDEA instalado
+    - MySQL Server 8.0 instalado
+    - MySQL Workbench instalado
+    - Maven (viene incluido con IntelliJ)
 
-## Requisitos previos
+PASOS PARA CONFIGURAR EL ENTORNO
 
-- Java JDK 17 o superior
-- IntelliJ IDEA
-- MySQL Server 8.0
-- MySQL Workbench
-- Maven (incluido en IntelliJ IDEA)
+1. Abre SQL Workbench y selecciona tu conexion de local.
 
-## Configurar la base de datos
+2. dale a crear un nuevo schema (nos servirá para desde ahí lanzar los script para que se cree la base de datos).
 
-1. Abre MySQL Workbench y conectate a tu servidor local.
-2. Crea un nuevo schema.
-3. Ve a la carpeta `src/main/java/com/Scripts/`:
-   - Abre `ddl_mysql.sql`, copia el contenido y pegalo en una nueva pestaña de consulta sobre el schema que creaste. Ejecutalo con el icono del rayo. Se creara el schema `crm` con todas las tablas.
-   - Haz lo mismo con `dml_mysql.sql` para cargar los datos de prueba.
+3. ahora en la carpeta script estarán el ddl_mysql y el dml_mysql.
+	3.1. Ejecuta el ddl_mysql.
+		3.1.1. Se te abrirá una nueva pestaña en sql workbench con el contenido.
+		3.1.2. Copia el contenido entero.
+		3.1.3. Haces doble clic en el schema que creamos antes y le damos a créate new SQL tab for executing queries.
+		3.1.4. Dentro de esa nueva pagina pegas el contenido del ddl, seleccionas todo y le das al rayo para ejecutarlo.
+		3.1.5. Le das a refrescar todo a la izquierda donde están los schemas. Veras q se ha creado uno nuevo que se llama crm.
 
-## Configurar la conexion a la base de datos
+	3.2. Ejecuta el dml_mysql.
+		3.2.1. Se te abrirá una nueva pestaña en sql workbench con el contenido.
+		3.2.2. Copia el contenido entero.
+		3.2.3. Haces doble clic en el schema que creamos antes y le damos a créate new SQL tab for executing queries.
+		3.2.4. Dentro de esa nueva pagina pegas el contenido del dml, seleccionas todo y le das al rayo para ejecutarlo.
+		3.2.5. Le das a refrescar todo a la izquierda donde están los schemas. Para que se complete todas las tablas y mas.
 
-Abre `src/main/java/com/pcmarketplace/util/DataBaseConection.java` y ajusta estas tres lineas con tus datos de MySQL:
+4. En la aplicación en el apartado de src\main\java\com.pcmarketplace\util\DataBaseConection.java.
+	4.1. Cambia la linea "private static final String URL = "jdbc:mysql://localhost:3306/crm";" si tienes otro puerto seleccionado.
+	4.2. Cambia la linea "private static final String USER = "root";" y pon el nombre que tu le pusistes en sql.
+	4.3. Cambia la linea "private static final String PASSWORD = "la_contraseña_MySQL";" y entre las comillas pon la contraseña que tengas en MySQL WorkBench.
 
-```java
-private static final String URL = "jdbc:mysql://localhost:3306/crm"; // cambia el puerto si es necesario
-private static final String USER = "root";                           // tu usuario de MySQL
-private static final String PASSWORD = "tu_contraseña";             // tu contraseña de MySQL
-```
+5. Despues de haber hecho todo, abre el archivo Main.java.
 
-## Ejecutar la aplicacion
+Extra. Si te da error a la hora de querer ver el contenido de las tablas (dml) entonces haz lo siguiente.
+    Extra.1. Dale clic derecho a pom.xml.
+    Extra.2. Dale a donde pone Maven.
+    Extra.3. Y le das a Sync Proyect arriba del todo para refrescar los cambios.
 
-1. Abre el proyecto en IntelliJ IDEA.
-2. Si Maven da algun error, haz clic derecho en `pom.xml` → Maven → Sync Project.
-3. Ejecuta la clase `Main.java`.
-
-## Uso
-
-Al ejecutar la aplicacion aparece el menu principal:
-
-```
-=============================
-       MENU PRINCIPAL
-=============================
-1. Clientes
-2. Usuarios
-3. Productos
-4. Ventas
-5. Detalles de venta
-0. Salir
-=============================
-```
-
-Desde cada opcion puedes listar, crear, actualizar y eliminar registros.
-
-## Estructura del proyecto
-
-```
-src/
- └── main/java/com/
-      ├── Scripts/              → Scripts SQL (DDL y DML)
-      └── pcmarketplace/
-           ├── models/          → Entidades del dominio (Customer, Product, Sale...)
-           ├── repositories/    → Acceso a datos (interfaces e implementaciones JDBC)
-           ├── services/        → Logica de negocio
-           ├── controllers/     → Controladores de cada entidad
-           ├── util/            → Conexion a BD y exportacion a CSV
-           ├── Menu.java        → Menu interactivo por consola
-           └── Main.java        → Punto de entrada de la aplicacion
-```
-
-## Autores
-
-- Javier — javierclementejr@gmail.com
-- Juanda — jdavidmatt27@gmail.com
+Una vez hecho esto, se podra ver el contenido de las tablas:
+    Ej:
+        Menu principal selecciona clientes
+        Menu de clientes selecciona Listar Cliente para ver tocos los clientes que hay.
+        Te deberian de aparecer todos, incluso los que has creado.
