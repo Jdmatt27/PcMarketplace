@@ -33,10 +33,10 @@ PASOS PARA CONFIGURAR EL ENTORNO
 		3.2.5. Le das a refrescar todo a la izquierda donde están los schemas. Para que se complete todas las tablas y mas.
 
 4. En la aplicación en el apartado de src\main\java\com.pcmarketplace\util\DataBaseConection.java.
-
-	4.1. Cambia la linea "private static final String URL = "jdbc:mysql://localhost:3306/crm";" si tienes otro puerto seleccionado.
-	4.2. Cambia la linea "private static final String USER = "root";" y pon el nombre que tu le pusistes en sql.
-	4.3. Cambia la linea "private static final String PASSWORD = "la_contraseña_MySQL";" y entre las comillas pon la contraseña que tengas en MySQL WorkBench.
+   
+		4.1. Cambia la linea "private static final String URL = "jdbc:mysql://localhost:3306/crm";" si tienes otro puerto seleccionado.
+		4.2. Cambia la linea "private static final String USER = "root";" y pon el nombre que tu le pusistes en sql.
+		4.3. Cambia la linea "private static final String PASSWORD = "la_contraseña_MySQL";" y entre las comillas pon la contraseña que tengas en MySQL WorkBench.
 
 5. Despues de haber hecho todo, abre el archivo Main.java.
 
