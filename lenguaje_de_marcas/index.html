@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PcMarketPlace | Panel de control</title>
+    <link rel="stylesheet" href="./assets/css/main.css">
+</head>
+
+<body>
+
+    <div class="app">
+        <aside class="sidebar">
+            <div class="sidebar__brand">
+                <span class="sidebar__logo">P</span>
+
+                <div>
+                    <h1 class="sidebar__title">PcMarketPlace</h1>
+                    <p class="sidebar__subtitle">Gestión comercial</p>
+                </div>
+            </div>
+
+            <nav class="sidebar__nav">
+                <a href="index.html" class="sidebar__link sidebar__link--active">Panel de control</a>
+                <a href="clientes.html" class="sidebar__link">Clientes</a>
+                <a href="productos.html" class="sidebar__link">Productos</a>
+                <a href="ventas.html" class="sidebar__link">Ventas</a>
+                <a href="usuarios.html" class="sidebar__link">Equipo comercial</a>
+            </nav>
+        </aside>
+
+        <main class="main">
+            <header class="topbar">
+                <div>
+                    <p class="topbar__eyebrow">Resumen general</p>
+                    <h2 class="topbar__title">Panel de control</h2>
+                </div>
+
+                <a href="ventas.html" class="topbar__button">Registrar venta</a>
+            </header>
+
+            <section class="stats" id="stats"></section>
+
+            <section class="dashboard">
+                <article class="panel">
+                    <div class="panel__header">
+                        <div>
+                            <h3 class="panel__title">Últimas ventas</h3>
+                            <p class="panel__description">Operaciones comerciales registradas recientemente</p>
+                        </div>
+                    </div>
+
+                    <div class="table" id="latestSalesTable"></div>
+                </article>
+
+                <article class="panel">
+                    <div class="panel__header">
+                        <div>
+                            <h3 class="panel__title">Productos con bajo stock</h3>
+                            <p class="panel__description">Artículos que necesitan reposición</p>
+                        </div>
+                    </div>
+
+                    <div class="stock-list" id="lowStockList"></div>
+                </article>
+            </section>
+        </main>
+    </div>
+
+    <script src="./assets/js/models.js"></script>
+    <script src="./assets/js/storage.js"></script>
+    <script src="./assets/js/app.js"></script>
+</body>
+
+</html>

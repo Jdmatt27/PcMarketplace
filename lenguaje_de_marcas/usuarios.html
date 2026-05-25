@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PcMarketPlace | Equipo comercial</title>
+    <link rel="stylesheet" href="./assets/css/main.css">
+</head>
+
+<body>
+
+    <div class="app">
+        <aside class="sidebar">
+            <div class="sidebar__brand">
+                <span class="sidebar__logo">P</span>
+                <div>
+                    <h1 class="sidebar__title">PcMarketPlace</h1>
+                    <p class="sidebar__subtitle">Gestión comercial</p>
+                </div>
+            </div>
+
+            <nav class="sidebar__nav">
+                <a href="index.html" class="sidebar__link">Panel de control</a>
+                <a href="clientes.html" class="sidebar__link">Clientes</a>
+                <a href="productos.html" class="sidebar__link">Productos</a>
+                <a href="ventas.html" class="sidebar__link">Ventas</a>
+                <a href="usuarios.html" class="sidebar__link sidebar__link--active">Equipo comercial</a>
+            </nav>
+        </aside>
+
+        <main class="main">
+            <header class="topbar">
+                <div>
+                    <p class="topbar__eyebrow">Gestión interna</p>
+                    <h2 class="topbar__title">Equipo comercial</h2>
+                </div>
+            </header>
+
+            <section class="management">
+                <article class="panel">
+                    <div class="panel__header">
+                        <div>
+                            <h3 class="panel__title">Nuevo miembro</h3>
+                            <p class="panel__description">Registra o actualiza comerciales del equipo.</p>
+                        </div>
+                    </div>
+
+                    <form class="form" id="userForm">
+                        <input type="hidden" id="usuarioId">
+
+                        <div class="form__group">
+                            <label class="form__label" for="nombre">Nombre</label>
+                            <input class="form__input" type="text" id="nombre" required>
+                        </div>
+
+                        <div class="form__group">
+                            <label class="form__label" for="email">Email</label>
+                            <input class="form__input" type="email" id="email" required>
+                        </div>
+
+                        <div class="form__group">
+                            <label class="form__label" for="rol">Rol</label>
+                            <select class="form__select" id="rol" required>
+                                <option value="">Selecciona un rol</option>
+                                <option value="Comercial">Comercial</option>
+                                <option value="Responsable de ventas">Responsable de ventas</option>
+                                <option value="Atención al cliente">Atención al cliente</option>
+                                <option value="Administrador">Administrador</option>
+                            </select>
+                        </div>
+
+                        <div class="form__actions">
+                            <button class="button button--primary" type="submit" id="submitButton">
+                                Guardar miembro
+                            </button>
+
+                            <button class="button button--secondary" type="button" id="resetButton">
+                                Limpiar
+                            </button>
+                        </div>
+                    </form>
+                </article>
+
+                <article class="panel">
+                    <div class="panel__header">
+                        <div>
+                            <h3 class="panel__title">Listado del equipo</h3>
+                            <p class="panel__description">Consulta, edita o elimina miembros del equipo comercial.</p>
+                        </div>
+                    </div>
+
+                    <div class="toolbar">
+                        <input class="toolbar__search" type="search" id="searchUser" placeholder="Buscar miembro...">
+                    </div>
+
+                    <div class="table table--users" id="usersTable"></div>
+                </article>
+            </section>
+        </main>
+    </div>
+
+    <script src="./assets/js/models.js"></script>
+    <script src="./assets/js/storage.js"></script>
+    <script src="./assets/js/usuarios.js"></script>
+</body>
+
+</html>

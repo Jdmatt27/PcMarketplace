@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PcMarketPlace | Clientes</title>
+    <link rel="stylesheet" href="./assets/css/main.css">
+</head>
+
+<body>
+
+    <div class="app">
+        <aside class="sidebar">
+            <div class="sidebar__brand">
+                <span class="sidebar__logo">P</span>
+                <div>
+                    <h1 class="sidebar__title">PcMarketPlace</h1>
+                    <p class="sidebar__subtitle">Gestión comercial</p>
+                </div>
+            </div>
+
+            <nav class="sidebar__nav">
+                <a href="index.html" class="sidebar__link">Panel de control</a>
+                <a href="clientes.html" class="sidebar__link sidebar__link--active">Clientes</a>
+                <a href="productos.html" class="sidebar__link">Productos</a>
+                <a href="ventas.html" class="sidebar__link">Ventas</a>
+                <a href="usuarios.html" class="sidebar__link">Equipo comercial</a>
+            </nav>
+        </aside>
+
+        <main class="main">
+            <header class="topbar">
+                <div>
+                    <p class="topbar__eyebrow">Gestión de clientes</p>
+                    <h2 class="topbar__title">Clientes</h2>
+                </div>
+            </header>
+
+            <section class="management">
+                <article class="panel">
+                    <div class="panel__header">
+                        <div>
+                            <h3 class="panel__title">Nuevo cliente</h3>
+                            <p class="panel__description">Registra o actualiza la información comercial de un cliente.
+                            </p>
+                        </div>
+                    </div>
+
+                    <form class="form" id="clientForm">
+                        <input type="hidden" id="clienteId">
+
+                        <div class="form__group">
+                            <label class="form__label" for="nombre">Nombre</label>
+                            <input class="form__input" type="text" id="nombre" required>
+                        </div>
+
+                        <div class="form__group">
+                            <label class="form__label" for="email">Email</label>
+                            <input class="form__input" type="email" id="email" required>
+                        </div>
+
+                        <div class="form__group">
+                            <label class="form__label" for="telefono">Teléfono</label>
+                            <input class="form__input" type="text" id="telefono" required>
+                        </div>
+
+                        <div class="form__group">
+                            <label class="form__label" for="direccion">Dirección</label>
+                            <input class="form__input" type="text" id="direccion" required>
+                        </div>
+
+                        <div class="form__actions">
+                            <button class="button button--primary" type="submit" id="submitButton">
+                                Guardar cliente
+                            </button>
+
+                            <button class="button button--secondary" type="button" id="resetButton">
+                                Limpiar
+                            </button>
+                        </div>
+                    </form>
+                </article>
+
+                <article class="panel">
+                    <div class="panel__header">
+                        <div>
+                            <h3 class="panel__title">Listado de clientes</h3>
+                            <p class="panel__description">Consulta, edita o elimina clientes registrados.</p>
+                        </div>
+                    </div>
+
+                    <div class="toolbar">
+                        <input class="toolbar__search" type="search" id="searchClient" placeholder="Buscar cliente...">
+                    </div>
+
+                    <div class="table table--clients" id="clientsTable"></div>
+                </article>
+            </section>
+        </main>
+    </div>
+
+    <script src="./assets/js/models.js"></script>
+    <script src="./assets/js/storage.js"></script>
+    <script src="./assets/js/clientes.js"></script>
+</body>
+
+</html>
