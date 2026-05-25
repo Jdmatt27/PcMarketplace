@@ -735,3 +735,202 @@ END;
 
 
 -- ============================================================
+--  TABLA: DETALLE_VENTA
+-- ============================================================
+
+-- 1. Listar todo el detalle con nombre de producto
+DECLARE
+    CURSOR c_detalle IS
+        SELECT dv.id_detalle, dv.id_venta, p.nombre AS producto,
+               dv.cantidad, dv.precio_unitario,
+               dv.cantidad * dv.precio_unitario AS subtotal
+        FROM detalle_venta dv
+        JOIN productos p ON dv.id_producto = p.id_producto
+        ORDER BY dv.id_venta, dv.id_detalle;
+
+    v_id_det   detalle_venta.id_detalle%TYPE;
+    v_id_venta detalle_venta.id_venta%TYPE;
+    v_producto productos.nombre%TYPE;
+    v_cantidad detalle_venta.cantidad%TYPE;
+    v_precio   detalle_venta.precio_unitario%TYPE;
+    v_subtotal NUMBER;
+BEGIN
+    OPEN c_detalle;
+    LOOP
+        FETCH c_detalle INTO v_id_det, v_id_venta, v_producto,
+                             v_cantidad, v_precio, v_subtotal;
+        EXIT WHEN c_detalle%NOTFOUND;
+        DBMS_OUTPUT.PUT_LINE('Detalle #' || v_id_det ||
+            ' | Venta #' || v_id_venta ||
+            ' | ' || UPPER(v_producto) ||
+            ' x' || v_cantidad ||
+            ' | ' || v_precio || ' EUR/u' ||
+            ' | Subtotal: ' || ROUND(v_subtotal, 2) || ' EUR');
+    END LOOP;
+    CLOSE c_detalle;
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_detalle%ISOPEN THEN CLOSE c_detalle; END IF;
+        DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+END;
+/
+
+-- 2. Detalle completo de una venta concreta
+DECLARE
+    v_id_venta detalle_venta.id_venta%TYPE := 1;
+
+    CURSOR c_detalle_venta IS
+        SELECT dv.id_detalle, p.nombre AS producto,
+               dv.cantidad, dv.precio_unitario,
+               dv.cantidad * dv.precio_unitario AS subtotal
+        FROM detalle_venta dv
+        JOIN productos p ON dv.id_producto = p.id_producto
+        WHERE dv.id_venta = v_id_venta
+        ORDER BY dv.id_detalle;
+
+    v_id_det   detalle_venta.id_detalle%TYPE;
+    v_producto productos.nombre%TYPE;
+    v_cantidad detalle_venta.cantidad%TYPE;
+    v_precio   detalle_venta.precio_unitario%TYPE;
+    v_subtotal NUMBER;
+    v_total    NUMBER := 0;
+    v_lineas   NUMBER := 0;
+BEGIN
+    DBMS_OUTPUT.PUT_LINE('=== Detalle venta #' || v_id_venta || ' ===');
+    OPEN c_detalle_venta;
+    LOOP
+        FETCH c_detalle_venta INTO v_id_det, v_producto,
+                                   v_cantidad, v_precio, v_subtotal;
+        EXIT WHEN c_detalle_venta%NOTFOUND;
+        v_lineas := v_lineas + 1;
+        v_total  := v_total + v_subtotal;
+        DBMS_OUTPUT.PUT_LINE('  ' || v_lineas || '. ' || UPPER(v_producto) ||
+            ' x' || v_cantidad ||
+            ' a ' || v_precio || ' EUR/u' ||
+            ' = ' || ROUND(v_subtotal, 2) || ' EUR');
+    END LOOP;
+    CLOSE c_detalle_venta;
+
+    IF v_lineas = 0 THEN
+        DBMS_OUTPUT.PUT_LINE('  Esta venta no tiene lineas de detalle.');
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('  TOTAL: ' || ROUND(v_total, 2) ||
+            ' EUR (' || v_lineas || ' lineas)');
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_detalle_venta%ISOPEN THEN CLOSE c_detalle_venta; END IF;
+        DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+END;
+/
+
+-- 3. Productos mas vendidos por unidades totales
+DECLARE
+    CURSOR c_top IS
+        SELECT p.nombre, SUM(dv.cantidad) AS total_uds,
+               ROUND(SUM(dv.cantidad * dv.precio_unitario), 2) AS total_eur
+        FROM detalle_venta dv
+        JOIN productos p ON dv.id_producto = p.id_producto
+        GROUP BY p.nombre
+        ORDER BY total_uds DESC;
+
+    v_nombre    productos.nombre%TYPE;
+    v_total_uds NUMBER;
+    v_total_eur NUMBER;
+    v_pos       NUMBER := 0;
+BEGIN
+    OPEN c_top;
+    LOOP
+        FETCH c_top INTO v_nombre, v_total_uds, v_total_eur;
+        EXIT WHEN c_top%NOTFOUND;
+        v_pos := v_pos + 1;
+        DBMS_OUTPUT.PUT_LINE('#' || v_pos ||
+            ' ' || UPPER(v_nombre) ||
+            ' | ' || v_total_uds || ' uds' ||
+            ' | ' || v_total_eur || ' EUR');
+    END LOOP;
+    CLOSE c_top;
+
+    IF v_pos = 0 THEN
+        DBMS_OUTPUT.PUT_LINE('No hay datos de ventas todavia.');
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_top%ISOPEN THEN CLOSE c_top; END IF;
+        DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+END;
+/
+
+-- 4. Lineas con cantidad mayor a 1
+DECLARE
+    CURSOR c_multiplos IS
+        SELECT dv.id_detalle, dv.id_venta, p.nombre AS producto,
+               dv.cantidad, dv.precio_unitario,
+               dv.cantidad * dv.precio_unitario AS subtotal
+        FROM detalle_venta dv
+        JOIN productos p ON dv.id_producto = p.id_producto
+        WHERE dv.cantidad > 1
+        ORDER BY dv.cantidad DESC;
+
+    v_id_det   detalle_venta.id_detalle%TYPE;
+    v_id_venta detalle_venta.id_venta%TYPE;
+    v_producto productos.nombre%TYPE;
+    v_cantidad detalle_venta.cantidad%TYPE;
+    v_precio   detalle_venta.precio_unitario%TYPE;
+    v_subtotal NUMBER;
+    v_contador NUMBER := 0;
+BEGIN
+    OPEN c_multiplos;
+    LOOP
+        FETCH c_multiplos INTO v_id_det, v_id_venta, v_producto,
+                               v_cantidad, v_precio, v_subtotal;
+        EXIT WHEN c_multiplos%NOTFOUND;
+        v_contador := v_contador + 1;
+        DBMS_OUTPUT.PUT_LINE('Venta #' || v_id_venta ||
+            ' | ' || UPPER(v_producto) ||
+            ' x' || v_cantidad ||
+            ' | Subtotal: ' || ROUND(v_subtotal, 2) || ' EUR');
+    END LOOP;
+    CLOSE c_multiplos;
+    DBMS_OUTPUT.PUT_LINE('Lineas con cantidad > 1: ' || v_contador);
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_multiplos%ISOPEN THEN CLOSE c_multiplos; END IF;
+        DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+END;
+/
+
+-- 5. Resumen por venta: total y numero de lineas (cursor anidado)
+DECLARE
+    CURSOR c_ventas_ids IS
+        SELECT DISTINCT id_venta FROM detalle_venta ORDER BY id_venta;
+
+    CURSOR c_resumen(p_id IN NUMBER) IS
+        SELECT COUNT(*), ROUND(SUM(cantidad * precio_unitario), 2)
+        FROM detalle_venta
+        WHERE id_venta = p_id;
+
+    v_id_venta detalle_venta.id_venta%TYPE;
+    v_lineas   NUMBER;
+    v_total    NUMBER;
+BEGIN
+    OPEN c_ventas_ids;
+    LOOP
+        FETCH c_ventas_ids INTO v_id_venta;
+        EXIT WHEN c_ventas_ids%NOTFOUND;
+
+        OPEN c_resumen(v_id_venta);
+        FETCH c_resumen INTO v_lineas, v_total;
+        CLOSE c_resumen;
+
+        DBMS_OUTPUT.PUT_LINE('Venta #' || v_id_venta ||
+            ' | Lineas: ' || v_lineas ||
+            ' | Total: ' || NVL(TO_CHAR(v_total), '0.00') || ' EUR');
+    END LOOP;
+    CLOSE c_ventas_ids;
+EXCEPTION
+    WHEN OTHERS THEN
+        IF c_ventas_ids%ISOPEN THEN CLOSE c_ventas_ids; END IF;
+        DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+END;
+/
