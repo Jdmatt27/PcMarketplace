@@ -1,0 +1,50 @@
+
+CREATE OR REPLACE TRIGGER trg_clientes_bi
+    BEFORE INSERT ON clientes
+    FOR EACH ROW
+BEGIN
+    IF :NEW.id_cliente IS NULL THEN
+        :NEW.id_cliente := seq_clientes.NEXTVAL;
+    END IF;
+END;
+/
+
+CREATE OR REPLACE TRIGGER trg_usuarios_bi
+    BEFORE INSERT ON usuarios
+    FOR EACH ROW
+BEGIN
+    IF :NEW.id_usuario IS NULL THEN
+        :NEW.id_usuario := seq_usuarios.NEXTVAL;
+    END IF;
+END;
+/
+
+CREATE OR REPLACE TRIGGER trg_productos_bi
+    BEFORE INSERT ON productos
+    FOR EACH ROW
+BEGIN
+    IF :NEW.id_producto IS NULL THEN
+        :NEW.id_producto := seq_productos.NEXTVAL;
+    END IF;
+END;
+/
+
+CREATE OR REPLACE TRIGGER trg_ventas_bi
+    BEFORE INSERT ON ventas
+    FOR EACH ROW
+BEGIN
+    IF :NEW.id_venta IS NULL THEN
+        :NEW.id_venta := seq_ventas.NEXTVAL;
+    END IF;
+END;
+/
+
+CREATE OR REPLACE TRIGGER trg_detalle_venta_bi
+    BEFORE INSERT ON detalle_venta
+    FOR EACH ROW
+BEGIN
+    IF :NEW.id_detalle IS NULL THEN
+        :NEW.id_detalle := seq_detalle_venta.NEXTVAL;
+    END IF;
+END;
+/
